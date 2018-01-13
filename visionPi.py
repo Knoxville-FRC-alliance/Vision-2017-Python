@@ -24,16 +24,29 @@ from pdb import set_trace as br
 
 ipPath = "/home/pi/git/Vision/Vision-2017-Python/ipdoc.txt"
 rioPort = 31400
+loopLimit = 10000
+
+print("!!! Starting visionPi.py !!!")
 
 while True:
-    if (os.path.exists(ipPath)):
-        ipFile = open(ipPath, "r") #Opens the file that stores the Rio IP
-        rioIP = ipFile.read()
-        print(rioIP)
-        ipFile.close()
+    loopLimit = loopLimit - 1
+    if loopLimit < 1:
+        print("visionPi - Loop limit exceeded")
+        sys.exit(0)
+    try:
+        if (os.path.exists(ipPath)):
+            ipFile = open(ipPath, "r") #Opens the file that stores the Rio IP
+            rioIP = ipFile.read()
+            print(rioIP)
+            ipFile.close()
+            break
+	if (loopLimit % 10) == 0:
+        	print("visionPi - Reading Rio IP from file")
+        time.sleep(1)
+    except KeyboardInterrupt:
+        print("visionPi - Breaking...")
         break
-    print("Reading Rio IP from file")
-    time.sleep(1)
+        
 
 # Routines to parse command line arguments
 
@@ -49,7 +62,7 @@ args=parser.parse_args()
 def retryUDP():
     global sock
     time.sleep(1)
-    print("Retrying UDP Connection")
+    print("visionPi - Retrying UDP Connection")
     sock=udpInit(rioIP, rioPort)
     
 # Define an error printing function for error reporting to terminal STD error IO stream
@@ -72,6 +85,7 @@ def udpInit(udp_ip,udp_port):
 	try:
 		assert type(udp_ip)==str
 		UDP_IP = udp_ip
+		print("IP Set")
 	except:
 		eprint('Error: Provided udp_ip is not a valid ip')
 		#ipFile.close()
@@ -82,6 +96,7 @@ def udpInit(udp_ip,udp_port):
 	try:
 		assert type(udp_port)==int and udp_port in xrange(1,49151) #xrange is more memory efficient than range for large ranges
 		UDP_PORT = udp_port
+		print("Port Set")
 	except:
 		eprint('Error: Provided port is invalid')
                 #ipFile.close()
@@ -93,6 +108,7 @@ def udpInit(udp_ip,udp_port):
 									 socket.SOCK_DGRAM) # UDP
 		UDP_SOCK.connect((UDP_IP,UDP_PORT))
 		UDP_SOCK.setblocking(0) # make the recieve not wait for the buffer to fill before continuing
+		print("Socket Set")
 	except:
 		eprint('Error: Cannot find RoboRio')
 		#ipFile.close()
@@ -910,7 +926,10 @@ while(camera.isOpened()):								# Main Processing Loop
 
 		if not args.noudp:
 	#		udpSend(str(runtime)+',12,34,Last',sock)
-			udpSend(str(timeStamp)+','+str(id)+','+str(found)+','+str(slantRange)+','+str(bearing)+','+str(elevation),sock) #What's being sent through UDP
+                        try:
+                            udpSend(str(timeStamp)+','+str(id)+','+str(found)+','+str(slantRange)+','+str(bearing)+','+str(elevation),sock) #What's being sent through UDP
+                        except:
+                            print("Error: Reciever not found!")
 
 		if (args.debug):
 			runtime=time.time()-start_time
